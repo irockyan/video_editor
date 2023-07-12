@@ -17,7 +17,8 @@ enum CropBoundaries {
   centerRight,
   centerLeft,
   bottomCenter,
-  none
+  none,
+  scale,
 }
 
 class CropGridViewer extends StatefulWidget {
@@ -158,7 +159,7 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   void _onPanDown(DragDownDetails details) {
     final Offset pos = details.localPosition - gestureOffset;
     _boundary = CropBoundaries.none;
-
+    debugPrint('onPanDown $details');
     if (_expandedRect().contains(pos)) {
       _boundary = CropBoundaries.inside;
 
@@ -279,6 +280,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
           case CropBoundaries.bottomRight:
             right = left + height * aspectRatio!;
             break;
+          case CropBoundaries.scale:
+            break;
           default:
             assert(false);
         }
@@ -291,6 +294,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
           case CropBoundaries.bottomLeft:
           case CropBoundaries.bottomRight:
             bottom = top + width / aspectRatio!;
+            break;
+          case CropBoundaries.scale:
             break;
           default:
             assert(false);
@@ -343,10 +348,13 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         Transform.rotate(
           angle: transform.rotation,
           child: GestureDetector(
-            onPanDown: _onPanDown,
-            onPanUpdate: _onPanUpdate,
-            onPanEnd: (_) => _onPanEnd(),
+            // onPanDown: _onPanDown,
+            // onPanUpdate: _onPanUpdate,
+            // onPanEnd: (_) => _onPanEnd(),
             onTapUp: (_) => _onPanEnd(),
+            onScaleStart: _onScaleStart,
+            onScaleUpdate: _onScaleUpdate,
+            onScaleEnd: _onScaleEnd,
             child: const SizedBox.expand(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -372,5 +380,46 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         showGrid: widget.showGrid,
       ),
     );
+  }
+
+  var _isScaleStart = false;
+  var _scaleStartRect = Rect.zero;
+
+  void _onScaleStart(ScaleStartDetails details) {
+    debugPrint('scale start: delta: $details');
+    _controller.isCropping = true;
+    _isScaleStart = details.pointerCount >= 2;
+    _scaleStartRect = rect.value;
+    if (_isScaleStart) {
+      _boundary = CropBoundaries.scale;
+    } else {
+      _onPanDown(DragDownDetails(globalPosition: details.focalPoint,
+          localPosition: details.localFocalPoint));
+    }
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    final scale = details.scale;
+    debugPrint('scale: $scale delta: $details');
+    if (_isScaleStart) {
+      final newSize = _scaleStartRect.size * scale;
+      final horizontalDelta = (newSize.width - _scaleStartRect.width) / 2;
+      final verticalDelta = (newSize.height - _scaleStartRect.height) / 2;
+      _changeRect(
+        left: _scaleStartRect.left - horizontalDelta,
+        top: _scaleStartRect.top - verticalDelta,
+        right: _scaleStartRect.right + horizontalDelta,
+        bottom: _scaleStartRect.bottom + verticalDelta,
+      );
+    } else {
+      _onPanUpdate(DragUpdateDetails(delta: details.focalPointDelta,
+          globalPosition: details.focalPoint,
+          localPosition: details.localFocalPoint));
+    }
+  }
+
+  void _onScaleEnd(ScaleEndDetails details) {
+    debugPrint('scale end: delta: $details');
+    _onPanEnd();
   }
 }
