@@ -384,7 +384,6 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   var _scaleStartRect = Rect.zero;
 
   void _onScaleStart(ScaleStartDetails details) {
-    debugPrint('scale start: delta: $details');
     _controller.isCropping = true;
     _isScaleStart = details.pointerCount >= 2;
     _scaleStartRect = rect.value;
@@ -398,7 +397,6 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
     final scale = details.scale;
-    debugPrint('scale: $scale delta: $details');
     if (_isScaleStart) {
       final newSize = _scaleStartRect.size * scale;
       final horizontalDelta = (newSize.width - _scaleStartRect.width) / 2;
@@ -417,7 +415,6 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
-    debugPrint('scale end: delta: $details');
     _onPanEnd();
   }
 }
