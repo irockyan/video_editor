@@ -96,8 +96,13 @@ class _VideoEditorState extends State<VideoEditor> {
     super.initState();
     _controller
         .initialize(aspectRatio: 9 / 16)
-        .then((_) => setState(() {}))
+        .then((_) => setState(() {
+      debugPrint("crop endtime:${_controller.endTrim}, maxtrim:${_controller.maxTrim}, maxDuration:${_controller.maxDuration}");
+    }), onError: (error) {
+      print("*************$error");
+    })
         .catchError((error) {
+      print("*************$error");
       // handle minumum duration bigger than video duration error
       Navigator.pop(context);
     }, test: (e) => e is VideoMinDurationError);
@@ -139,6 +144,7 @@ class _VideoEditorState extends State<VideoEditor> {
       await config.getExecuteConfig(),
       onProgress: (stats) {
         _exportingProgress.value = config.getFFmpegProgress(stats.getTime());
+        debugPrint("crop export Progress: $_exportingProgress, endtime:${_controller.endTrim}, maxtrim:${_controller.maxTrim}, maxDuration:${_controller.maxDuration}");
       },
       onError: (e, s) => _showErrorSnackBar("Error on export video :("),
       onCompleted: (file) {

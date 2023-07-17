@@ -278,9 +278,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
             break;
           case CropBoundaries.topRight:
           case CropBoundaries.bottomRight:
-            right = left + height * aspectRatio!;
-            break;
           case CropBoundaries.scale:
+            right = left + height * aspectRatio!;
             break;
           default:
             assert(false);
@@ -293,9 +292,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
             break;
           case CropBoundaries.bottomLeft:
           case CropBoundaries.bottomRight:
-            bottom = top + width / aspectRatio!;
-            break;
           case CropBoundaries.scale:
+            bottom = top + width / aspectRatio!;
             break;
           default:
             assert(false);
