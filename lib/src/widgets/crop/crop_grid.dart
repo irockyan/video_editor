@@ -26,7 +26,7 @@ class CropGridViewer extends StatefulWidget {
   const CropGridViewer.preview({
     super.key,
     required this.controller,
-  })  : showGrid = false,
+  })  : showGrid = true,
         rotateCropArea = true,
         margin = EdgeInsets.zero;
 
@@ -262,8 +262,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
     if (_boundary != CropBoundaries.none || force) {
       final Rect r = rect.value;
       _controller.cacheMinCrop = Offset(
-        r.left / layout.width,
-        r.top / layout.height,
+        0,
+        0,
       );
       _controller.cacheMaxCrop = Offset(
         r.right / layout.width,

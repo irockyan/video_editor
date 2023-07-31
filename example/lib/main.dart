@@ -227,7 +227,7 @@ class _VideoEditorState extends State<VideoEditor> {
                                                   ),
                                                   child: const Icon(
                                                     Icons.play_arrow,
-                                                    color: Colors.black,
+                                                    color: Colors.pink,
                                                   ),
                                                 ),
                                               ),
