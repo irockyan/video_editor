@@ -26,7 +26,7 @@ class CropGridViewer extends StatefulWidget {
   const CropGridViewer.preview({
     super.key,
     required this.controller,
-  })  : showGrid = true,
+  })  : showGrid = false,
         rotateCropArea = true,
         margin = EdgeInsets.zero;
 
@@ -105,7 +105,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   /// Update crop [Rect] after change in [_controller] such as change of aspect ratio
   void _updateRect() {
     layout = _computeLayout();
-    videoRect.value = _computeVideoRect();
+    videoRect.value =
+        videoRect.value.left == 0 ? _computeVideoRect() : videoRect.value;
     transform.value = TransformData.fromController(_controller);
     _calculatePreferedCrop();
   }
@@ -142,6 +143,7 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   void _scaleRect() {
     layout = _computeLayout();
     rect.value = calculateCroppedRect(_controller, layout);
+    videoRect.value = _computeVideoRect();
     transform.value =
         TransformData.fromRect(rect.value, layout, viewerSize, _controller);
   }
@@ -216,6 +218,7 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         top.clamp(minTop, maxTop),
         videoRect.value.width,
         videoRect.value.height);
+
     return;
 
     switch (_boundary) {
@@ -259,20 +262,22 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   }
 
   void _onPanEnd({bool force = false}) {
-    if (_boundary != CropBoundaries.none || force) {
-      final Rect r = rect.value;
-      _controller.cacheMinCrop = Offset(
-        0,
-        0,
-      );
-      _controller.cacheMaxCrop = Offset(
-        r.right / layout.width,
-        r.bottom / layout.height,
-      );
-      _controller.isCropping = false;
-      // to update selected boundary color
-      setState(() => _boundary = CropBoundaries.none);
-    }
+    final newRect = videoRect.value;
+    final minLeft = _controller.initialArea.left - newRect.left;
+    final minTop = _controller.initialArea.top - newRect.top;
+    _controller.cacheMinCrop = Offset(
+      minLeft / videoRect.value.width,
+      minTop / videoRect.value.height,
+    );
+    final maxLeft = minLeft + _controller.initialArea.width;
+    final maxTop = minTop + _controller.initialArea.height;
+    _controller.cacheMaxCrop = Offset(
+      maxLeft / videoRect.value.width,
+      maxTop / videoRect.value.height,
+    );
+    _controller.isCropping = false;
+    // to update selected boundary color
+    // setState(() => _boundary = CropBoundaries.none);
   }
 
   //-----------//
@@ -330,61 +335,6 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         !isRectContained(layout, newRect)) return;
 
     rect.value = newRect;
-  }
-
-  void _changeVideoRect(
-      {double? left, double? top, double? right, double? bottom}) {
-    top = max(0, top ?? rect.value.top);
-    left = max(0, left ?? rect.value.left);
-    right = min(layout.width, right ?? rect.value.right);
-    bottom = min(layout.height, bottom ?? rect.value.bottom);
-
-    // update crop height or width to adjust to the selected aspect ratio
-    if (aspectRatio != null) {
-      final width = right - left;
-      final height = bottom - top;
-
-      if (width / height > aspectRatio!) {
-        switch (_boundary) {
-          case CropBoundaries.topLeft:
-          case CropBoundaries.bottomLeft:
-            left = right - height * aspectRatio!;
-            break;
-          case CropBoundaries.topRight:
-          case CropBoundaries.bottomRight:
-          case CropBoundaries.scale:
-            right = left + height * aspectRatio!;
-            break;
-          default:
-            assert(false);
-        }
-      } else {
-        switch (_boundary) {
-          case CropBoundaries.topLeft:
-          case CropBoundaries.topRight:
-            top = bottom - width / aspectRatio!;
-            break;
-          case CropBoundaries.bottomLeft:
-          case CropBoundaries.bottomRight:
-          case CropBoundaries.scale:
-            bottom = top + width / aspectRatio!;
-            break;
-          default:
-            assert(false);
-        }
-      }
-    }
-
-    final newRect = Rect.fromLTRB(left, top, right, bottom);
-
-    print("看---$newRect");
-
-    // don't apply changes if out of bounds
-    // if (newRect.width < minRectSize ||
-    //     newRect.height < minRectSize ||
-    //     !isRectContained(layout, newRect)) return;
-
-    videoRect.value = newRect;
   }
 
   void _changeLayout(
@@ -586,7 +536,6 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         // }
         print("左最大$minLeft");
         print("左最小$maxLeft");
-        print("左$newWidth");
         videoRect.value = Rect.fromLTWH(left, top, newWidth, newHeight);
       } else {
         final newSize = _scaleStartRect.size * scale;
@@ -615,6 +564,7 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
 
   void _onScaleEnd(ScaleEndDetails details) {
     if (cropAreaLock) {
+      _onPanEnd();
     } else {
       _onPanEnd();
     }
