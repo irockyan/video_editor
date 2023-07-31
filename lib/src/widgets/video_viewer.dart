@@ -26,6 +26,10 @@ class VideoViewer extends StatelessWidget {
               child: VideoPlayer(controller.video),
             ),
             if (child != null)
+              // AspectRatio(
+              //   aspectRatio: controller.video.value.aspectRatio,
+              //   child: child,
+              // ),
               AspectRatio(
                 aspectRatio: controller.video.value.aspectRatio,
                 child: child,

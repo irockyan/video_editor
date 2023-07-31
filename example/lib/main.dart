@@ -86,22 +86,21 @@ class _VideoEditorState extends State<VideoEditor> {
   final double height = 60;
 
   late final VideoEditorController _controller = VideoEditorController.file(
-    widget.file,
-    minDuration: const Duration(seconds: 1),
-    maxDuration: const Duration(seconds: 10),
-  );
+      widget.file,
+      minDuration: const Duration(seconds: 1),
+      maxDuration: const Duration(seconds: 10),
+      initialArea: Rect.fromLTWH(100, 100, 200, 200));
 
   @override
   void initState() {
     super.initState();
-    _controller
-        .initialize(aspectRatio: 9 / 16)
-        .then((_) => setState(() {
-      debugPrint("crop endtime:${_controller.endTrim}, maxtrim:${_controller.maxTrim}, maxDuration:${_controller.maxDuration}");
-    }), onError: (error) {
+    _controller.initialize(aspectRatio: 9 / 16).then(
+        (_) => setState(() {
+              debugPrint(
+                  "crop endtime:${_controller.endTrim}, maxtrim:${_controller.maxTrim}, maxDuration:${_controller.maxDuration}");
+            }), onError: (error) {
       print("*************$error");
-    })
-        .catchError((error) {
+    }).catchError((error) {
       print("*************$error");
       // handle minumum duration bigger than video duration error
       Navigator.pop(context);
@@ -144,7 +143,8 @@ class _VideoEditorState extends State<VideoEditor> {
       await config.getExecuteConfig(),
       onProgress: (stats) {
         _exportingProgress.value = config.getFFmpegProgress(stats.getTime());
-        debugPrint("crop export Progress: $_exportingProgress, endtime:${_controller.endTrim}, maxtrim:${_controller.maxTrim}, maxDuration:${_controller.maxDuration}");
+        debugPrint(
+            "crop export Progress: $_exportingProgress, endtime:${_controller.endTrim}, maxtrim:${_controller.maxTrim}, maxDuration:${_controller.maxDuration}");
       },
       onError: (e, s) => _showErrorSnackBar("Error on export video :("),
       onCompleted: (file) {

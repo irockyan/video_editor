@@ -37,6 +37,8 @@ class VideoEditorController extends ChangeNotifier {
   /// Style for [CropGridViewer]
   final CropGridStyle cropStyle;
 
+  final Rect initialArea;
+
   /// Video from [File].
   final File file;
 
@@ -45,6 +47,7 @@ class VideoEditorController extends ChangeNotifier {
   /// The [file] argument must not be null.
   VideoEditorController.file(
     this.file, {
+    required this.initialArea,
     this.maxDuration = Duration.zero,
     this.minDuration = Duration.zero,
     this.coverThumbnailsQuality = 10,

@@ -12,16 +12,21 @@ import 'package:video_editor/src/widgets/video_viewer.dart';
 
 mixin CropPreviewMixin<T extends StatefulWidget> on State<T> {
   final ValueNotifier<Rect> rect = ValueNotifier<Rect>(Rect.zero);
+  final ValueNotifier<Rect> videoRect = ValueNotifier<Rect>(Rect.zero);
   final ValueNotifier<TransformData> transform =
       ValueNotifier<TransformData>(const TransformData());
 
   Size viewerSize = Size.zero;
   Size layout = Size.zero;
 
+  /// 是否锁定裁剪区域范围
+  var cropAreaLock = true;
+
   @override
   void dispose() {
     transform.dispose();
     rect.dispose();
+    videoRect.dispose();
     super.dispose();
   }
 
@@ -44,6 +49,46 @@ mixin CropPreviewMixin<T extends StatefulWidget> on State<T> {
     return computeSizeWithRatio(size, videoRatio);
   }
 
+  Rect computeVideoRect(
+    VideoEditorController controller, {
+    EdgeInsets margin = EdgeInsets.zero,
+    bool shouldFlipped = false,
+  }) {
+    final size = Size(viewerSize.width - margin.horizontal,
+        viewerSize.height - margin.vertical);
+    double containerWidth = size.width;
+    double containerHeight = size.height;
+    var trueWidth = 0.0;
+    var trueHeight = 0.0;
+    var left = 0.0;
+    var right = 0.0;
+    var top = 0.0;
+    var bottom = 0.0;
+    final aspectRatio = controller.video.value.aspectRatio;
+    if (aspectRatio > containerWidth / containerHeight) {
+      trueHeight = containerHeight;
+      trueWidth = controller.video.value.size.width *
+          trueHeight /
+          controller.video.value.size.height;
+
+      left = -((containerWidth - trueWidth) * 0.5).abs();
+      right = -((containerWidth - trueWidth) * 0.5).abs();
+    } else {
+      trueWidth = containerWidth > controller.video.value.size.width
+          ? containerWidth
+          : controller.video.value.size.width;
+      trueHeight = controller.video.value.size.height *
+          trueWidth /
+          controller.video.value.size.width;
+
+      top = -((containerHeight - trueHeight) * 0.5).abs();
+      bottom = -((containerHeight - trueHeight) * 0.5).abs();
+    }
+    return Rect.fromLTWH(left, top, trueWidth, trueHeight);
+    // return Rect.fromLTRB(left, top, right, bottom);
+    // return computeSizeWithRatio(size, videoRatio);
+  }
+
   void updateRectFromBuild();
 
   Widget buildView(BuildContext context, TransformData transform);
@@ -56,22 +101,41 @@ mixin CropPreviewMixin<T extends StatefulWidget> on State<T> {
     CropBoundaries boundary, {
     bool showGrid = false,
   }) {
-    return SizedBox.fromSize(
-      size: layout,
-      child: CropTransformWithAnimation(
-        shouldAnimate: layout != Size.zero,
-        transform: transform,
-        child: VideoViewer(
-          controller: controller,
-          child: buildPaint(
-            controller,
-            boundary: boundary,
-            showGrid: showGrid,
-            showCenterRects: controller.preferredCropAspectRatio == null,
-          ),
-        ),
-      ),
-    );
+    return Container(
+        color: Colors.red,
+        child: ValueListenableBuilder(
+          valueListenable: videoRect,
+          builder: (context, Rect value, child) {
+            return CropTransformWithAnimation(
+              shouldAnimate: layout != Size.zero,
+              transform: transform,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: value.left,
+                    // right: value.right,
+                    width: value.width,
+                    height: value.height,
+                    top: value.top,
+                    // bottom: videoRect.value.bottom,
+                    child: VideoViewer(
+                      controller: controller,
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: buildPaint(
+                      controller,
+                      boundary: boundary,
+                      showGrid: showGrid,
+                      showCenterRects:
+                          controller.preferredCropAspectRatio == null,
+                    ),
+                  )
+                ],
+              ),
+            );
+          },
+        ));
   }
 
   /// Returns the [ImageViewer] tranformed with editing view

@@ -97,10 +97,15 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         margin: widget.margin,
         shouldFlipped: _controller.isRotated && widget.showGrid,
       );
+  Rect _computeVideoRect() => computeVideoRect(
+        _controller,
+        margin: widget.margin,
+      );
 
   /// Update crop [Rect] after change in [_controller] such as change of aspect ratio
   void _updateRect() {
     layout = _computeLayout();
+    videoRect.value = _computeVideoRect();
     transform.value = TransformData.fromController(_controller);
     _calculatePreferedCrop();
   }
@@ -125,7 +130,11 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
     }
 
     setState(() {
-      rect.value = newRect;
+      if (cropAreaLock) {
+        rect.value = _controller.initialArea;
+      } else {
+        rect.value = newRect;
+      }
       _onPanEnd(force: true);
     });
   }
@@ -159,6 +168,7 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   void _onPanDown(DragDownDetails details) {
     final Offset pos = details.localPosition - gestureOffset;
     _boundary = CropBoundaries.none;
+    return;
     debugPrint('onPanDown $details');
     if (_expandedRect().contains(pos)) {
       _boundary = CropBoundaries.inside;
@@ -190,17 +200,26 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    if (_boundary == CropBoundaries.none) return;
     final Offset delta = details.delta;
+
+    var left = videoRect.value.left + delta.dx;
+    var width = videoRect.value.width;
+    var height = videoRect.value.height;
+    final top = videoRect.value.top + delta.dy;
+    final maxLeft = _controller.initialArea.left;
+    final minLeft = _controller.initialArea.right - width;
+    final maxTop = _controller.initialArea.top;
+    final minTop = _controller.initialArea.bottom - height;
+
+    videoRect.value = Rect.fromLTWH(
+        left.clamp(minLeft, maxLeft),
+        top.clamp(minTop, maxTop),
+        videoRect.value.width,
+        videoRect.value.height);
+    return;
 
     switch (_boundary) {
       case CropBoundaries.inside:
-        final Offset pos = rect.value.topLeft + delta;
-        rect.value = Rect.fromLTWH(
-            pos.dx.clamp(0, layout.width - rect.value.width),
-            pos.dy.clamp(0, layout.height - rect.value.height),
-            rect.value.width,
-            rect.value.height);
         break;
       //CORNERS
       case CropBoundaries.topLeft:
@@ -233,6 +252,8 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
         _changeRect(right: rect.value.right + delta.dx);
         break;
       case CropBoundaries.none:
+        break;
+      case CropBoundaries.scale:
         break;
     }
   }
@@ -311,6 +332,116 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
     rect.value = newRect;
   }
 
+  void _changeVideoRect(
+      {double? left, double? top, double? right, double? bottom}) {
+    top = max(0, top ?? rect.value.top);
+    left = max(0, left ?? rect.value.left);
+    right = min(layout.width, right ?? rect.value.right);
+    bottom = min(layout.height, bottom ?? rect.value.bottom);
+
+    // update crop height or width to adjust to the selected aspect ratio
+    if (aspectRatio != null) {
+      final width = right - left;
+      final height = bottom - top;
+
+      if (width / height > aspectRatio!) {
+        switch (_boundary) {
+          case CropBoundaries.topLeft:
+          case CropBoundaries.bottomLeft:
+            left = right - height * aspectRatio!;
+            break;
+          case CropBoundaries.topRight:
+          case CropBoundaries.bottomRight:
+          case CropBoundaries.scale:
+            right = left + height * aspectRatio!;
+            break;
+          default:
+            assert(false);
+        }
+      } else {
+        switch (_boundary) {
+          case CropBoundaries.topLeft:
+          case CropBoundaries.topRight:
+            top = bottom - width / aspectRatio!;
+            break;
+          case CropBoundaries.bottomLeft:
+          case CropBoundaries.bottomRight:
+          case CropBoundaries.scale:
+            bottom = top + width / aspectRatio!;
+            break;
+          default:
+            assert(false);
+        }
+      }
+    }
+
+    final newRect = Rect.fromLTRB(left, top, right, bottom);
+
+    print("看---$newRect");
+
+    // don't apply changes if out of bounds
+    // if (newRect.width < minRectSize ||
+    //     newRect.height < minRectSize ||
+    //     !isRectContained(layout, newRect)) return;
+
+    videoRect.value = newRect;
+  }
+
+  void _changeLayout(
+      {double? left, double? top, double? right, double? bottom}) {
+    top = max(0, top ?? rect.value.top);
+    left = max(0, left ?? rect.value.left);
+    right = min(layout.width, right ?? rect.value.right);
+    bottom = min(layout.height, bottom ?? rect.value.bottom);
+
+    // update crop height or width to adjust to the selected aspect ratio
+    if (aspectRatio != null) {
+      final width = right - left;
+      final height = bottom - top;
+
+      if (width / height > aspectRatio!) {
+        switch (_boundary) {
+          case CropBoundaries.topLeft:
+          case CropBoundaries.bottomLeft:
+            left = right - height * aspectRatio!;
+            break;
+          case CropBoundaries.topRight:
+          case CropBoundaries.bottomRight:
+          case CropBoundaries.scale:
+            right = left + height * aspectRatio!;
+            break;
+          default:
+            assert(false);
+        }
+      } else {
+        switch (_boundary) {
+          case CropBoundaries.topLeft:
+          case CropBoundaries.topRight:
+            top = bottom - width / aspectRatio!;
+            break;
+          case CropBoundaries.bottomLeft:
+          case CropBoundaries.bottomRight:
+          case CropBoundaries.scale:
+            bottom = top + width / aspectRatio!;
+            break;
+          default:
+            assert(false);
+        }
+      }
+    }
+
+    final newRect = Rect.fromLTRB(left, top, right, bottom);
+
+    // don't apply changes if out of bounds
+    if (newRect.width < minRectSize ||
+        newRect.height < minRectSize ||
+        !isRectContained(layout, newRect)) return;
+
+    setState(() {
+      layout = newRect.size;
+    });
+  }
+
   @override
   void updateRectFromBuild() {
     if (widget.showGrid) {
@@ -382,15 +513,18 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
 
   var _isScaleStart = false;
   var _scaleStartRect = Rect.zero;
+  var _scaleStartVideoRect = Rect.zero;
 
   void _onScaleStart(ScaleStartDetails details) {
     _controller.isCropping = true;
     _isScaleStart = details.pointerCount >= 2;
     _scaleStartRect = rect.value;
     if (_isScaleStart) {
+      _scaleStartVideoRect = videoRect.value;
       _boundary = CropBoundaries.scale;
     } else {
-      _onPanDown(DragDownDetails(globalPosition: details.focalPoint,
+      _onPanDown(DragDownDetails(
+          globalPosition: details.focalPoint,
           localPosition: details.localFocalPoint));
     }
   }
@@ -398,23 +532,91 @@ class _CropGridViewerState extends State<CropGridViewer> with CropPreviewMixin {
   void _onScaleUpdate(ScaleUpdateDetails details) {
     final scale = details.scale;
     if (_isScaleStart) {
-      final newSize = _scaleStartRect.size * scale;
-      final horizontalDelta = (newSize.width - _scaleStartRect.width) / 2;
-      final verticalDelta = (newSize.height - _scaleStartRect.height) / 2;
-      _changeRect(
-        left: _scaleStartRect.left - horizontalDelta,
-        top: _scaleStartRect.top - verticalDelta,
-        right: _scaleStartRect.right + horizontalDelta,
-        bottom: _scaleStartRect.bottom + verticalDelta,
-      );
+      if (cropAreaLock) {
+        final newSize = _scaleStartVideoRect.size * scale;
+        final horizontalDelta =
+            (newSize.width - _scaleStartVideoRect.width) / 2;
+        final verticalDelta =
+            (newSize.height - _scaleStartVideoRect.height) / 2;
+
+        var left = _scaleStartVideoRect.left - horizontalDelta;
+        var top = _scaleStartVideoRect.top - verticalDelta;
+
+        var width = videoRect.value.width;
+        var height = videoRect.value.height;
+
+        final minLeft = _controller.initialArea.right - width;
+        final maxLeft = _controller.initialArea.left;
+
+        final maxTop = _controller.initialArea.top;
+        final minTop = _controller.initialArea.bottom - height;
+
+        if (left >= maxLeft) {
+          left = maxLeft;
+        }
+
+        if (left <= minLeft) {
+          left = minLeft;
+        }
+
+        if (top >= maxTop) {
+          top = maxTop;
+        }
+
+        if (top <= minTop) {
+          top = minTop;
+        }
+
+        var newWidth = width;
+        var newHeight = height;
+        if (newSize.width >= _controller.initialArea.size.width &&
+            newSize.height >= _controller.initialArea.size.height) {
+          newWidth = newSize.width;
+          newHeight = newSize.height;
+        }
+        // if (newWidth <= _controller.initialArea.size.width) {
+        //   newWidth = _controller.initialArea.size.width;
+        // }
+
+        // if (newHeight <= _controller.initialArea.size.height) {
+        //   newHeight = _controller.initialArea.size.height;
+        // }
+        // if (top <= _controller.initialArea.size.height) {
+        //   width = _controller.initialArea.size.width;
+        // }
+        print("左最大$minLeft");
+        print("左最小$maxLeft");
+        print("左$newWidth");
+        videoRect.value = Rect.fromLTWH(left, top, newWidth, newHeight);
+      } else {
+        final newSize = _scaleStartRect.size * scale;
+        final horizontalDelta = (newSize.width - _scaleStartRect.width) / 2;
+        final verticalDelta = (newSize.height - _scaleStartRect.height) / 2;
+        _changeRect(
+          left: _scaleStartRect.left - horizontalDelta,
+          top: _scaleStartRect.top - verticalDelta,
+          right: _scaleStartRect.right + horizontalDelta,
+          bottom: _scaleStartRect.bottom + verticalDelta,
+        );
+        // _changeLayout(
+        //   left: _scaleStartRect.left - horizontalDelta,
+        //   top: _scaleStartRect.top - verticalDelta,
+        //   right: _scaleStartRect.right + horizontalDelta,
+        //   bottom: _scaleStartRect.bottom + verticalDelta,
+        // );
+      }
     } else {
-      _onPanUpdate(DragUpdateDetails(delta: details.focalPointDelta,
+      _onPanUpdate(DragUpdateDetails(
+          delta: details.focalPointDelta,
           globalPosition: details.focalPoint,
           localPosition: details.localFocalPoint));
     }
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
-    _onPanEnd();
+    if (cropAreaLock) {
+    } else {
+      _onPanEnd();
+    }
   }
 }
