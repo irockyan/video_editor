@@ -102,7 +102,7 @@ mixin CropPreviewMixin<T extends StatefulWidget> on State<T> {
     bool showGrid = false,
   }) {
     return Container(
-        color: Colors.red,
+        color: const Color(0xff35394D),
         child: ValueListenableBuilder(
           valueListenable: videoRect,
           builder: (context, Rect value, child) {

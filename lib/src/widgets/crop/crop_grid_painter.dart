@@ -56,20 +56,60 @@ class CropGridPainter extends CustomPainter {
       ..strokeWidth = style.gridLineWidth
       ..color = style.gridLineColor;
 
-    for (int i = 1; i < gridSize; i++) {
+    for (int i = 0; i <= gridSize; i++) {
       double rowDy = rect.topLeft.dy + (rect.height / gridSize) * i;
       double columnDx = rect.topLeft.dx + (rect.width / gridSize) * i;
-      canvas.drawLine(
-        Offset(columnDx, rect.topLeft.dy),
-        Offset(columnDx, rect.bottomLeft.dy),
-        paint,
-      );
-      canvas.drawLine(
-        Offset(rect.topLeft.dx, rowDy),
-        Offset(rect.topRight.dx, rowDy),
-        paint,
-      );
+      if (i == 0 || i == gridSize) {
+        paint.color = style.gridLineColor;
+        canvas.drawLine(
+          Offset(columnDx, rect.topLeft.dy),
+          Offset(columnDx, rect.bottomLeft.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(rect.topLeft.dx, rowDy),
+          Offset(rect.topRight.dx, rowDy),
+          paint,
+        );
+      } else {
+        paint.color = Colors.white.withOpacity(0.5);
+        canvas.drawLine(
+          Offset(columnDx, rect.topLeft.dy),
+          Offset(columnDx, rect.bottomLeft.dy),
+          paint,
+        );
+        drawDashedLine(canvas, paint, Offset(columnDx, rect.topLeft.dy),
+            Offset(columnDx, rect.bottomLeft.dy), 5, 5);
+        canvas.drawLine(
+          Offset(rect.topLeft.dx, rowDy),
+          Offset(rect.topRight.dx, rowDy),
+          paint,
+        );
+      }
     }
+  }
+
+  void drawDashedLine(Canvas canvas1, Paint paint, Offset start, Offset end,
+      double dashWidth, double dashSpace) {
+    final path = Path();
+    path.moveTo(start.dx, end.dy);
+    path.lineTo(end.dx, end.dy);
+
+    // final distance = end.dx - start.dx;
+    // final dashCount = (distance / (dashWidth + dashSpace)).floor();
+
+    // final dxStep = (end.dx - start.dx) / dashCount;
+    // final dyStep = (end.dy - start.dy) / dashCount;
+
+    // for (var i = 0; i < dashCount; ++i) {
+    //   final from = Offset(start.dx + i * dxStep, start.dy + i * dyStep);
+    //   final to =
+    //       Offset(start.dx + (i + 1) * dxStep, start.dy + (i + 1) * dyStep);
+    //   path.lineTo(from.dx, from.dy);
+    //   path.moveTo(to.dx, to.dy);
+    // }
+
+    canvas1.drawPath(path, paint);
   }
 
   Paint getPaintFromBoundary(CropBoundaries offset) {
@@ -87,65 +127,71 @@ class CropGridPainter extends CustomPainter {
     //EDGE//
     //----//
     // TOP LEFT |-
+    final topLeft = rect.topLeft.translate(-width, -width);
     canvas.drawRect(
       Rect.fromPoints(
-        rect.topLeft,
-        rect.topLeft + Offset(width, length),
+        topLeft,
+        topLeft + Offset(width, length),
       ),
       getPaintFromBoundary(CropBoundaries.topLeft),
     );
     canvas.drawRect(
       Rect.fromPoints(
-        rect.topLeft,
-        rect.topLeft + Offset(length, width),
+        topLeft,
+        topLeft + Offset(length, width),
       ),
       getPaintFromBoundary(CropBoundaries.topLeft),
     );
 
     // TOP RIGHT -|
+    final topRight = rect.topRight.translate(width, -width);
     canvas.drawRect(
       Rect.fromPoints(
-        rect.topRight - Offset(length, 0.0),
-        rect.topRight + Offset(0.0, width),
+        topRight - Offset(length, 0.0),
+        topRight + Offset(0.0, width),
       ),
       getPaintFromBoundary(CropBoundaries.topRight),
     );
     canvas.drawRect(
       Rect.fromPoints(
-        rect.topRight,
-        rect.topRight - Offset(width, -length),
+        topRight,
+        topRight - Offset(width, -length),
       ),
       getPaintFromBoundary(CropBoundaries.topRight),
     );
 
     // BOTTOM RIGHT _|
+    final bottomRight = rect.bottomRight.translate(width, width);
+
     canvas.drawRect(
       Rect.fromPoints(
-        rect.bottomRight - Offset(width, length),
-        rect.bottomRight,
+        bottomRight - Offset(width, length),
+        bottomRight,
       ),
       getPaintFromBoundary(CropBoundaries.bottomRight),
     );
     canvas.drawRect(
       Rect.fromPoints(
-        rect.bottomRight,
-        rect.bottomRight - Offset(length, width),
+        bottomRight,
+        bottomRight - Offset(length, width),
       ),
       getPaintFromBoundary(CropBoundaries.bottomRight),
     );
 
     // BOTTOM LEFT |_
+    final bottomLeft = rect.bottomLeft.translate(-width, width);
+
     canvas.drawRect(
       Rect.fromPoints(
-        rect.bottomLeft - Offset(-width, length),
-        rect.bottomLeft,
+        bottomLeft - Offset(-width, length),
+        bottomLeft,
       ),
       getPaintFromBoundary(CropBoundaries.bottomLeft),
     );
     canvas.drawRect(
       Rect.fromPoints(
-        rect.bottomLeft,
-        rect.bottomLeft + Offset(length, -width),
+        bottomLeft,
+        bottomLeft + Offset(length, -width),
       ),
       getPaintFromBoundary(CropBoundaries.bottomLeft),
     );
