@@ -73,43 +73,52 @@ class CropGridPainter extends CustomPainter {
         );
       } else {
         paint.color = Colors.white.withOpacity(0.5);
-        canvas.drawLine(
-          Offset(columnDx, rect.topLeft.dy),
-          Offset(columnDx, rect.bottomLeft.dy),
-          paint,
-        );
+        // canvas.drawLine(
+        //   Offset(columnDx, rect.topLeft.dy),
+        //   Offset(columnDx, rect.bottomLeft.dy),
+        //   paint,
+        // );
         drawDashedLine(canvas, paint, Offset(columnDx, rect.topLeft.dy),
-            Offset(columnDx, rect.bottomLeft.dy), 5, 5);
-        canvas.drawLine(
-          Offset(rect.topLeft.dx, rowDy),
-          Offset(rect.topRight.dx, rowDy),
-          paint,
-        );
+            Offset(columnDx, rect.bottomLeft.dy), 5);
+        drawDashedLineY(canvas, paint, Offset(rect.topLeft.dx, rowDy),
+            Offset(rect.topRight.dx, rowDy), 5);
+        // canvas.drawLine(
+        //   Offset(rect.topLeft.dx, rowDy),
+        //   Offset(rect.topRight.dx, rowDy),
+        //   paint,
+        // );
       }
     }
   }
 
-  void drawDashedLine(Canvas canvas1, Paint paint, Offset start, Offset end,
-      double dashWidth, double dashSpace) {
-    final path = Path();
-    path.moveTo(start.dx, end.dy);
-    path.lineTo(end.dx, end.dy);
+  void drawDashedLine(
+      Canvas canvas1, Paint paint, Offset start, Offset end, double dashSpace) {
+    paint.style = PaintingStyle.stroke;
 
-    // final distance = end.dx - start.dx;
-    // final dashCount = (distance / (dashWidth + dashSpace)).floor();
+    final distance = end.dy - start.dy;
+    final dashCount = (distance - dashSpace) / (dashSpace * 2).floor();
 
-    // final dxStep = (end.dx - start.dx) / dashCount;
-    // final dyStep = (end.dy - start.dy) / dashCount;
+    final dyStep = distance / dashCount;
 
-    // for (var i = 0; i < dashCount; ++i) {
-    //   final from = Offset(start.dx + i * dxStep, start.dy + i * dyStep);
-    //   final to =
-    //       Offset(start.dx + (i + 1) * dxStep, start.dy + (i + 1) * dyStep);
-    //   path.lineTo(from.dx, from.dy);
-    //   path.moveTo(to.dx, to.dy);
-    // }
+    for (var i = 0; i < dashCount; i++) {
+      canvas1.drawLine(Offset(start.dx, (start.dy) + i * dyStep),
+          Offset(start.dx, start.dy + (i) * dyStep + dyStep * 0.5), paint);
+    }
+  }
 
-    canvas1.drawPath(path, paint);
+  void drawDashedLineY(
+      Canvas canvas1, Paint paint, Offset start, Offset end, double dashSpace) {
+    paint.style = PaintingStyle.stroke;
+
+    final distance = end.dx - start.dx;
+    final dashCount = (distance - dashSpace) / (dashSpace * 2).floor();
+
+    final dyStep = distance / dashCount;
+
+    for (var i = 0; i < dashCount; i++) {
+      canvas1.drawLine(Offset((start.dx) + i * dyStep, start.dy),
+          Offset(start.dx + (i) * dyStep + dyStep * 0.5, start.dy), paint);
+    }
   }
 
   Paint getPaintFromBoundary(CropBoundaries offset) {
